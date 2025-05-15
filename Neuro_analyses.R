@@ -26,7 +26,7 @@ dat$pedu_c<- relevel(factor(dat$pedu_c), ref="low")
 dat$income<- relevel(factor(dat$income), ref="lower")
 dat$race_ethnicity<- relevel(factor(dat$race_ethnicity), ref="white")
 
-#something with neuro stuff
+#select out these vars
 neuro <- subset(neuro, select = -c(smri_vol_cdk_total, smri_vol_scs_wholeb))
 
 ######## first sip###########################
