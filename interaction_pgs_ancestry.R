@@ -6,7 +6,7 @@
 
 #start script#
 
-#read in packages, pray amarel cooperates
+#read in packages
 library(survival)
 library(dplyr)
 library(coxme)
