@@ -1,0 +1,215 @@
+---
+title: "stepwise_models_maia"
+author: "Maia Choi"
+date: "2024-06-03"
+output: html_notebook
+---
+
+#load libraries
+```{r, echo=FALSE}
+library(survival)
+library(stats)
+library(tidyverse)
+library(dplyr)
+library(ggplot2)
+library(psych)
+library(MASS)
+library(modelsummary)
+library(gt)
+library(gtsummary)
+library(car)
+library(coxme)
+```
+
+#load data
+```{r}
+pheno <- read.csv("phenotypic_vars_file_path") 
+enviro <- read.csv("environmental_vars_file_path") 
+geno <- read.csv("genetic_vars_file_path") 
+
+#merge files
+dat <- merge(pheno, enviro, by = c("src_subject_id"), all.x = TRUE)
+dat <- merge(dat, geno, by = c("src_subject_id"), all.x = TRUE)
+
+#set refs for categorical covars
+dat$pedu_c<- relevel(factor(dat$pedu_c), ref="low")
+dat$income<- relevel(factor(dat$income), ref="lower")
+dat$race_ethnicity<- relevel(factor(dat$race_ethnicity), ref="white")
+```
+
+#Sip
+```{r}
+#drop missing across all these variables
+dat_na <- dat %>%
+dplyr::select(src_subject_id, age_sip_use, sip_ever, sex, pedu_c, income,race_ethnicity,
+EXT_resid,alcC_resid,DEP_resid,
+upps_y_ss_negative_urgency,upps_y_ss_lack_of_planning,upps_y_ss_sensation_seeking,
+upps_y_ss_positive_urgency,upps_y_ss_lack_of_perseverance,
+coi_ed,coi_se,fes_y_ss_fc, pmq_y_ss_mean, fhx_su_bi, macv_p_ss_r, prenat_su_exp,
+srpf_y_ss_ses,srpf_y_ss_iiss,srpf_y_ss_dfs,cog_score, site_id_l,fid) %>%
+  na.omit()
+
+#set your lower/ base step model. covars that must be included
+scope <- list(
+lower = ~ factor(sex)+ factor(pedu_c)+ factor(income)+ factor(race_ethnicity),
+#set your upper/ full step model. this is the max of all variables to go in the model
+upper = ~ 
+factor(sex)+ factor(pedu_c)+ factor(income)+factor(race_ethnicity)+
+EXT_resid+ alcC_resid+DEP_resid+
+upps_y_ss_negative_urgency+ upps_y_ss_lack_of_planning+ upps_y_ss_sensation_seeking+ 
+upps_y_ss_positive_urgency+ upps_y_ss_lack_of_perseverance+
+coi_ed+coi_se+fes_y_ss_fc+ pmq_y_ss_mean+ fhx_su_bi+ macv_p_ss_r+ prenat_su_exp+
+srpf_y_ss_ses+srpf_y_ss_iiss+srpf_y_ss_dfs+cog_score
+)
+
+base_cph <- coxph(Surv(age_sip_use, sip_ever) ~  factor(sex) + factor(pedu_c)+ factor(income)+factor(race_ethnicity), data = dat_na)
+
+full_cph<- coxph(Surv(age_sip_use, sip_ever) ~  factor(sex) + factor(pedu_c)+ factor(income)+factor(race_ethnicity)+
+EXT_resid+ alcC_resid+ DEP_resid+
+upps_y_ss_negative_urgency+ upps_y_ss_lack_of_planning+ upps_y_ss_sensation_seeking+ upps_y_ss_positive_urgency+ upps_y_ss_lack_of_perseverance+
+coi_ed+coi_se+fes_y_ss_fc+ pmq_y_ss_mean+ fhx_su_bi+ macv_p_ss_r+ prenat_su_exp+
+srpf_y_ss_ses+srpf_y_ss_iiss+srpf_y_ss_dfs+cog_score, data = dat_na)
+#run model
+step_sip <- stepAIC(full_cph, scope = scope, direction = "both")
+summary(step_sip)$coefficients
+
+#create output table of variables
+tab<- modelsummary(step_sip,
+            fmt_statistic(estimate=fmt_sprintf("%.2f"), conf.int=fmt_sprintf("%.2f"), p.value= NULL),
+             statistic = c("{conf.low}",
+                           "{conf.high}",
+                            "{p.value}"),
+             exponentiate = TRUE,
+            output = "gt")%>%
+          gtsave(filename="kitchensink_sip.html" )
+```
+
+#calculate VIF values for your full and output models
+```{r}
+vif_values_final<- vif(step_sip)
+vif_values_full<- vif(full_cph)
+
+vif_values_rounded<- round(vif_values_full, digits=1)
+median(vif_values_rounded)
+table(vif_values_rounded)
+```
+
+#Full Drink
+```{r}
+#subset data
+dat_na <- dat %>%
+dplyr::select(src_subject_id, age_drink_use, drink_ever, sex, pedu_c, income,race_ethnicity,
+EXT_resid,
+upps_y_ss_lack_of_planning,upps_y_ss_sensation_seeking,upps_y_ss_positive_urgency,
+fes_y_ss_fc,srpf_y_ss_ses,srpf_y_ss_iiss,srpf_y_ss_dfs,fhx_su_bi,
+macv_p_ss_r,prenat_su_exp, site_id_l,fid)%>%
+na.omit()
+
+dat_na$pedu_c<- relevel(factor(dat_na$pedu_c), ref="mid")
+dat_na$income<- relevel(factor(dat_na$income), ref="lower")
+dat_na$race_ethnicity<- relevel(factor(dat_na$race_ethnicity), ref="white")
+
+scope <- list(
+lower = ~ factor(sex)+ factor(pedu_c)+ factor(income)+factor(race_ethnicity),
+upper = ~ 
+factor(sex)+ factor(pedu_c)+ factor(income)+factor(race_ethnicity)+
+EXT_resid+
+upps_y_ss_lack_of_planning+ upps_y_ss_sensation_seeking+ upps_y_ss_positive_urgency+ 
+fes_y_ss_fc+srpf_y_ss_ses+ srpf_y_ss_iiss+ srpf_y_ss_dfs+ fhx_su_bi+ 
+macv_p_ss_r+prenat_su_exp
+)
+
+#models
+base_cph <- coxph(Surv(age_drink_use, drink_ever) ~  factor(sex) + factor(pedu_c)+ factor(income)+factor(race_ethnicity), data = dat_na)
+
+full_cph<- coxph(Surv(age_drink_use, drink_ever) ~
+factor(sex)+ factor(pedu_c)+ factor(income)+factor(race_ethnicity)+
+EXT_resid+
+upps_y_ss_lack_of_planning+ upps_y_ss_sensation_seeking+ upps_y_ss_positive_urgency+ 
+fes_y_ss_fc+srpf_y_ss_ses+ srpf_y_ss_iiss+ srpf_y_ss_dfs+ fhx_su_bi+ 
+macv_p_ss_r+prenat_su_exp,data = dat_na)
+
+step_drink <- stepAIC(full_cph, scope = scope, direction = "both")
+summary(step_drink)
+
+tab<- modelsummary(step_drink, 
+            fmt_statistic(estimate=fmt_sprintf("%.2f"), conf.int=fmt_sprintf("%.2f"), p.value= NULL),
+             statistic = c("{conf.low}",
+                           "{conf.high}",
+                            "{p.value}"),
+             exponentiate = TRUE,
+            output = "gt")%>%
+          gtsave(filename="kitchensink_drink_11_12.html" )
+```
+
+```{r}
+vif_values<- vif(step_EA_drink)
+vif_values<- vif(full_cph)
+vif_values_rounded<- round(vif_values, digits=2)
+median(vif_values_rounded)
+table(vif_values_rounded)
+```
+
+```{r}
+full_cph_RE<- coxme(Surv(age_drink_use, drink_ever) ~
+factor(sex)+ factor(pedu_c)+ factor(income)+factor(race_ethnicity)+
+EXT_resid+
+upps_y_ss_sensation_seeking+  
+srpf_y_ss_iiss+
+macv_p_ss_r+prenat_su_exp+(1|site_id_l/fid),data = dat_na)
+```
+
+#make progression var and subset
+```{r}
+#subset to sip only 
+dat_drink <- dat %>%
+               filter(sip_ever == 1)
+
+# create age difference variable
+dat_drink$age_sip_drink_use<- dat_drink$age_drink_use- dat_drink$age_sip_use
+dat_drink$age_sip_drink_use[dat_drink$age_sip_drink_use<0]<-0
+
+```
+
+#PROG Drink
+```{r}
+scope <- list(
+lower = ~ factor(sex)+ factor(pedu_c)+ factor(income)+factor(race_ethnicity),
+upper = ~ 
+factor(sex)+ factor(pedu_c)+ factor(income)+factor(race_ethnicity)+
+EXT_resid+
+upps_y_ss_sensation_seeking)
+
+#subset data
+dat_na <- dat_drink %>%
+dplyr::select(src_subject_id, age_sip_drink_use, drink_ever, sex, pedu_c, income,race_ethnicity,
+EXT_resid,upps_y_ss_sensation_seeking)%>%
+na.omit()
+
+dat_na$pedu_c<- relevel(factor(dat_na$pedu_c), ref="mid")
+dat_na$income<- relevel(factor(dat_na$income), ref="lower")
+dat_na$race_ethnicity<- relevel(factor(dat_na$race_ethnicity), ref="white")
+
+#models
+base_cph <- coxph(Surv(age_sip_drink_use, drink_ever) ~  factor(sex) + factor(pedu_c)+ factor(income)+ factor(race_ethnicity), data = dat_na)
+
+full_cph<- coxph(Surv(age_sip_drink_use, drink_ever) ~
+factor(sex)+ factor(pedu_c)+ factor(income)+factor(race_ethnicity)+
+EXT_resid+upps_y_ss_sensation_seeking, data = dat_na)
+
+step_prog <- stepAIC(full_cph, scope = scope, direction = "both")
+summary(step_prog)
+
+tab<- modelsummary(step_prog, 
+            fmt_statistic(estimate=fmt_sprintf("%.2f"), conf.int=fmt_sprintf("%.2f"), p.value= NULL),
+             statistic = c("{conf.low}",
+                           "{conf.high}",
+                            "{p.value}"),
+             exponentiate = TRUE,
+            output = "gt")%>%
+          gtsave(filename="kitchensink_prog_11_12.html" )
+
+```
+
+
+

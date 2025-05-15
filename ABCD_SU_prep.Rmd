@@ -1,0 +1,486 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+#read in data stuff
+
+setwd("WD path Here")
+
+```{r}
+#read in a file which has the alc data for full and mid year 
+dat<-read.csv("su_all_time_USE.csv")
+```
+
+#make opposite of long form data by waves
+```{r}
+#mid year
+dat_05<- subset(dat_2, dat_2$eventname=="6_month_follow_up_arm_1")
+dat_15<- subset(dat_2, dat_2$eventname=="18_month_follow_up_arm_1")
+dat_25<- subset(dat_2, dat_2$eventname=="30_month_follow_up_arm_1")
+dat_35<- subset(dat_2, dat_2$eventname=="42_month_follow_up_arm_1")
+
+colnames(dat_05) <- paste(colnames(dat_05), "05",sep = "_")
+colnames(dat_15) <- paste(colnames(dat_15), "15",sep = "_")
+colnames(dat_25) <- paste(colnames(dat_25), "25",sep = "_")
+colnames(dat_35) <- paste(colnames(dat_35), "35",sep = "_")
+
+dat_05$src_subject_id<- dat_05$src_subject_id_05
+dat_15$src_subject_id<- dat_15$src_subject_id_15
+dat_25$src_subject_id<- dat_25$src_subject_id_25
+dat_35$src_subject_id<- dat_35$src_subject_id_35
+
+list_df = list(dat_05, dat_15, dat_25, dat_35)
+dat_mid <- list_df %>% reduce(full_join, by='src_subject_id')
+
+write.csv(dat_mid, "su_mid_year.csv",row.names=F, quote=F)
+
+```
+
+#make opposite of long form data by waves
+```{r}
+#full year
+dat_0<- subset(dat1, dat1$eventname=="baseline_year_1_arm_1")
+dat_1<- subset(dat1, dat1$eventname=="1_year_follow_up_y_arm_1")
+dat_2<- subset(dat1, dat1$eventname=="2_year_follow_up_y_arm_1")
+dat_3<- subset(dat1, dat1$eventname=="3_year_follow_up_y_arm_1")
+dat_4<- subset(dat1, dat1$eventname=="4_year_follow_up_y_arm_1")
+
+colnames(dat_0) <- paste(colnames(dat_0), "0",sep = "_")
+colnames(dat_1) <- paste(colnames(dat_1), "1",sep = "_")
+colnames(dat_2) <- paste(colnames(dat_2), "2",sep = "_")
+colnames(dat_3) <- paste(colnames(dat_3), "3",sep = "_")
+colnames(dat_4) <- paste(colnames(dat_4), "4",sep = "_")
+
+dat_0$src_subject_id<- dat_0$src_subject_id_0
+dat_1$src_subject_id<- dat_1$src_subject_id_1
+dat_2$src_subject_id<- dat_2$src_subject_id_2
+dat_3$src_subject_id<- dat_3$src_subject_id_3
+dat_4$src_subject_id<- dat_4$src_subject_id_4
+
+list_df = list(dat_0, dat_1, dat_2, dat_3, dat_4)
+dat_full <- list_df %>% reduce(full_join, by='src_subject_id')
+
+write.csv(dat_full, "su_full_year.csv",row.names=F, quote=F)
+```
+
+#merge year and mid year data sets
+```{r}
+dat<- full_join(dat_full, dat_mid, by="src_subject_id")
+
+#save data
+write.csv(dat, "su_all_time.csv",row.names=F,quote=F)
+```
+
+
+#event coding
+```{r}
+dat$eventname_0[dat$eventname_0=="baseline_year_1_arm_1"]<-1
+
+dat$eventname_05[dat$eventname_05=="6_month_follow_up_arm_1"]<-2
+dat$eventname_05[is.na(dat$eventname_05)==T]<-0
+
+dat$eventname_1[dat$eventname_1=="1_year_follow_up_y_arm_1"]<-3
+dat$eventname_1[is.na(dat$eventname_1)==T]<-0
+
+dat$eventname_15[dat$eventname_15=="18_month_follow_up_arm_1"]<-4
+dat$eventname_15[is.na(dat$eventname_15)==T]<-0
+
+dat$eventname_2[dat$eventname_2=="2_year_follow_up_y_arm_1"]<-5
+dat$eventname_2[is.na(dat$eventname_2)==T]<-0
+
+dat$eventname_25[dat$eventname_25=="30_month_follow_up_arm_1"]<-6
+dat$eventname_25[is.na(dat$eventname_25)==T]<-0
+
+dat$eventname_3[dat$eventname_3=="3_year_follow_up_y_arm_1"]<-7
+dat$eventname_3[is.na(dat$eventname_3)==T]<-0
+
+dat$eventname_35[dat$eventname_35=="42_month_follow_up_arm_1"]<-8
+dat$eventname_35[is.na(dat$eventname_35)==T]<-0
+
+dat$eventname_4[dat$eventname_4=="4_year_follow_up_y_arm_1"]<-9
+dat$eventname_4[is.na(dat$eventname_4)==T]<-0
+
+dat$event<- NA
+dat$event[dat$eventname_0==1]<-1
+dat$event[dat$eventname_05==2]<-2
+dat$event[dat$eventname_1==3]<-3
+dat$event[dat$eventname_15==4]<-4
+dat$event[dat$eventname_2==5]<-5
+dat$event[dat$eventname_25==6]<-6
+dat$event[dat$eventname_3==7]<-7
+dat$event[dat$eventname_35==8]<-8
+dat$event[dat$eventname_4==9]<-9
+```
+
+#recoding SIP
+```{r}
+#sipping variables
+#full year
+table(dat$tlfb_alc_sip_0)
+table(dat$tlfb_alc_sip_1)
+table(dat$tlfb_alc_sip_2)
+table(dat$tlfb_alc_sip_3)
+table(dat$tlfb_alc_sip_4)
+
+#recode and religious 
+#full year
+dat$sip_0<-dat$tlfb_alc_sip_0
+dat$sip_0[dat$isip_1b_yn_0==0]<-0
+
+dat$sip_1<-dat$tlfb_alc_sip_1
+dat$sip_1[dat$isip_1b_yn_1==0]<-0
+
+dat$sip_2<-dat$tlfb_alc_sip_2
+dat$sip_2[dat$isip_1b_yn_2==0]<-0
+
+dat$sip_3<-dat$tlfb_alc_sip_3
+dat$sip_3[dat$isip_1b_yn_3==0]<-0
+
+dat$sip_4<-dat$tlfb_alc_sip_4
+dat$sip_4[dat$isip_1b_yn_4==0]<-0
+
+#mid year _05 t0 _35
+dat$sip_05<- dat$mypi_alc_sip_05
+dat$sip_05[dat$mypi_alc_sip_1b_05==0]<-0
+
+dat$sip_15<- dat$mypi_alc_sip_15
+dat$sip_15[dat$mypi_alc_sip_1b_15==0]<-0
+dat$sip_15[dat$mypi_alc_sip_15==777]<-NA
+
+dat$sip_25<- dat$mypi_alc_sip_25
+dat$sip_25[dat$mypi_alc_sip_1b_25==0]<-0
+dat$sip_25[dat$mypi_alc_sip_25==777]<-NA
+
+dat$sip_35<- dat$mypi_alc_sip_35
+dat$sip_35[dat$mypi_alc_sip_1b_35==0]<-0
+dat$sip_35[dat$mypi_alc_sip_35==777]<-NA
+
+```
+
+#get who has sipped by latest wave
+```{r}
+#collapse across waves
+
+vars<- c("sip_0","sip_05","sip_1","sip_15","sip_2",
+    "sip_25","sip_3","sip_35","sip_4")
+
+dat$sip_tot<- rowSums(dat[,vars],na.rm=T)
+
+#make ever 
+dat$sip_ever<- ifelse(dat$sip_tot>0,1,0)
+```
+
+#full year age sip
+```{r}
+#rename ages so it makes sense to me
+#year
+dat$age_sip_0<-dat$isip_1d_2_0
+dat$age_sip_1<-dat$isip_1d_1
+dat$age_sip_2<-dat$isip_1d_2
+dat$age_sip_3<-dat$isip_1d_3
+dat$age_sip_4<-dat$isip_1d_4
+```
+
+#get current ages full and mid year
+```{r}
+#current ages
+dat$age_0<- dat$tlfb_age_calc_inmonths_0/12
+dat$age_1<- dat$tlfb_age_calc_inmonths_1/12
+dat$age_2<- dat$tlfb_age_calc_inmonths_2/12
+dat$age_3<- dat$tlfb_age_calc_inmonths_3/12
+dat$age_4<- dat$tlfb_age_calc_inmonths_4/12
+
+#need to create age from birth date
+dob<- read.csv("su_initiation/baseline_date_age.csv")
+dat<- left_join(dat,dob, by="src_subject_id")
+dat$base_date<- as.Date(dat$interview_date, format = "%m/%d/%y")
+dat$base_age<- dat$interview_age/12
+
+# Convert to Date format
+dat$date_05 <- as.Date(dat$mypi_completion_date_05, format = "%m/%d/%y")
+dat$date_15 <- as.Date(dat$mypi_completion_date_15, format = "%m/%d/%y")
+dat$date_25 <- as.Date(dat$mypi_completion_date_25, format = "%m/%d/%y")
+dat$date_35 <- as.Date(dat$mypi_completion_date_35, format = "%m/%d/%y")
+
+dat$age_05 <- difftime(dat$date_05, dat$base_date, units = "days")/365.25
+dat$age_05<- as.numeric(dat$age_05)
+dat$age_05<- dat$age_05+dat$base_age
+
+dat$age_15 <- difftime(dat$date_15, dat$base_date, units = "days")/365.25
+dat$age_15<- as.numeric(dat$age_15)
+dat$age_15<- dat$age_15+dat$base_age
+
+dat$age_25 <- difftime(dat$date_25, dat$base_date, units = "days")/365.25
+dat$age_25<- as.numeric(dat$age_25)
+dat$age_25<- dat$age_25+dat$base_age
+
+dat$age_35 <- difftime(dat$date_35, dat$base_date, units = "days")/365.25
+dat$age_35<- as.numeric(dat$age_35)
+dat$age_35<- dat$age_35+dat$base_age
+
+dat$age_05 <- round(dat$age_05, digits = 2)
+dat$age_15 <- round(dat$age_15, digits = 2)
+dat$age_25 <- round(dat$age_25, digits = 2)
+dat$age_35 <- round(dat$age_35, digits = 2)
+```
+
+#sip age for mid year 
+```{r}
+dat$age_sip_05<- NA
+condition <- dat$sip_05 == 1
+indices <- which(condition)
+dat$age_sip_05[indices] <- dat$age_05[indices]
+
+dat$age_sip_15<- NA
+condition <- dat$sip_15 == 1
+indices <- which(condition)
+dat$age_sip_15[indices] <- dat$age_15[indices]
+
+dat$age_sip_25<- NA
+condition <- dat$sip_25 == 1
+indices <- which(condition)
+dat$age_sip_25[indices] <- dat$age_25[indices]
+
+dat$age_sip_35<- NA
+condition <- dat$sip_35 == 1
+indices <- which(condition)
+dat$age_sip_35[indices] <- dat$age_35[indices]
+
+#min age they reported drinking 
+vars<-c("age_sip_0","age_sip_05","age_sip_1","age_sip_15",
+  "age_sip_2","age_sip_25","age_sip_3","age_sip_35","age_sip_4")
+
+dat$age_sip <- do.call(pmin, c(dat[, vars], na.rm = TRUE))
+
+```
+
+#variables for cox
+#variable will be sip_ever
+#ages will come from age_sip
+```{r}
+#need to make age variable where if sip_ever==0 take last age
+dat <- dat %>%
+  group_by(src_subject_id) %>%
+  mutate(last_age = case_when(
+    event == 1 ~ age_0,
+    event == 2 ~ age_05,
+    event == 3 ~ age_1,
+    event == 4 ~ age_15,
+    event == 5 ~ age_2,
+    event == 6 ~ age_25,
+    event == 7 ~ age_3,
+    event == 8 ~ age_35,
+    event == 9 ~ age_4,
+    TRUE ~ NA_real_ ))
+#USE THIS IN THE REGRESSION 
+dat$age_sip_use<- ifelse(dat$sip_ever==1, dat$age_sip, dat$last_non_missing_age)
+```
+
+#maximum last age if event coding had an issue
+```{r}
+vars<-c("age_0","age_05","age_1","age_15",
+  "age_2","age_25","age_3","age_35","age_4")
+
+#dat$replace_last_age <- do.call(pmax, c(dat[, vars], na.rm = TRUE))
+
+dat$last_age_NEW<- dat$last_age
+
+dat$last_non_missing_age <- apply(dat[, vars], 1, function(x) {
+  last_age <- na.omit(x) 
+  if (length(last_age) > 0) {
+    return(tail(last_age, n = 1))  
+  } else {
+    return(NA) 
+  }
+})
+
+```
+
+#full drink coding
+#full year
+```{r}
+#full year
+dat$drink_0<- dat$tlfb_alc_use_0
+dat$drink_1<- dat$tlfb_alc_use_1
+dat$drink_2<- dat$tlfb_alc_use_2
+dat$drink_3<- dat$tlfb_alc_use_3
+dat$drink_4<- dat$tlfb_alc_use_4
+```
+
+#mid year
+```{r}
+#mid year
+dat$drink_05<- dat$mypi_alc_full_drink_05
+dat$drink_15<- dat$mypi_alc_full_drink_15
+dat$drink_15[dat$mypi_alc_full_drink_15==777]<-NA
+dat$drink_25<- dat$mypi_alc_full_drink_25
+dat$drink_25[dat$mypi_alc_full_drink_25==777]<-NA
+dat$drink_35<- dat$mypi_alc_full_drink_35
+dat$drink_35[dat$mypi_alc_full_drink_35==777]<-NA
+
+vars<- c("drink_0","drink_05","drink_1","drink_15","drink_2",
+         "drink_25","drink_3","drink_35","drink_4")
+
+#at this point is where full sample gets 0s
+
+dat$drink_tot<- rowSums(dat[,vars],na.rm=T)
+
+dat$drink_tot_NA<- rowSums(dat[,vars],na.rm=F)
+
+dat$drink_ever_NA<- ifelse(dat$drink_tot_NA>0,1,0)#full year
+dat$drink_0<- dat$tlfb_alc_use_0
+dat$drink_1<- dat$tlfb_alc_use_1
+dat$drink_2<- dat$tlfb_alc_use_2
+dat$drink_3<- dat$tlfb_alc_use_3
+dat$drink_4<- dat$tlfb_alc_use_4
+
+
+#mid year
+dat$drink_05<- dat$mypi_alc_full_drink_05
+dat$drink_15<- dat$mypi_alc_full_drink_15
+dat$drink_15[dat$mypi_alc_full_drink_15==777]<-NA
+dat$drink_25<- dat$mypi_alc_full_drink_25
+dat$drink_25[dat$mypi_alc_full_drink_25==777]<-NA
+dat$drink_35<- dat$mypi_alc_full_drink_35
+dat$drink_35[dat$mypi_alc_full_drink_35==777]<-NA
+
+vars<- c("drink_0","drink_05","drink_1","drink_15","drink_2",
+         "drink_25","drink_3","drink_35","drink_4")
+
+#at this point is where full sample gets 0s
+
+dat$drink_tot<- rowSums(dat[,vars],na.rm=T)
+
+dat$drink_tot_NA<- rowSums(dat[,vars],na.rm=F)
+
+dat$drink_ever_NA<- ifelse(dat$drink_tot_NA>0,1,0)
+```
+
+#recoding
+# use data from first time endorsed- if age is NA - take age at interview 
+```{r}
+#make ever 
+#this is now making it for the full sample
+#makes full drink 1, everyone else gets a 0
+dat$drink_ever<- ifelse(dat$drink_tot>0,1,0)
+
+#Create first drink age variable
+#rename ages so it makes sense to me
+#year
+dat$age_drink_0_raw<-dat$tlfb_alc_calc_0
+dat$age_drink_1_raw<-dat$tlfb_alc_calc_1
+dat$age_drink_2_raw<-dat$tlfb_alc_calc_2
+dat$age_drink_3_raw<-dat$tlfb_alc_calc_3
+dat$age_drink_4_raw<-dat$tlfb_alc_calc_4
+
+#age for full year 
+
+dat$age_drink_1<- dat$age_drink_1_raw
+condition <- (dat$drink_1 == 1 & is.na(dat$age_drink_1_raw==T))
+indices <- which(condition)
+dat$age_drink_1[indices] <- dat$age_1[indices]
+
+dat$age_drink_2<- dat$age_drink_2_raw
+condition <- (dat$drink_2 == 1 & is.na(dat$age_drink_2_raw==T))
+indices <- which(condition)
+dat$age_drink_2[indices] <- dat$age_2[indices]
+
+dat$age_drink_3<- dat$age_drink_3_raw
+condition <- (dat$drink_3 == 1 & is.na(dat$age_drink_3_raw==T))
+indices <- which(condition)
+dat$age_drink_3[indices] <- dat$age_3[indices]
+
+dat$age_drink_4<- dat$age_drink_4_raw
+condition <- (dat$drink_4 == 1 & is.na(dat$age_drink_4_raw==T))
+indices <- which(condition)
+dat$age_drink_4[indices] <- dat$age_4[indices]
+
+
+#drink age for mid year 
+dat$age_drink_05<- NA
+condition <- dat$drink_05 == 1
+indices <- which(condition)
+dat$age_drink_05[indices] <- dat$age_05[indices]
+
+dat$age_drink_15<- NA
+condition <- dat$drink_15 == 1
+indices <- which(condition)
+dat$age_drink_15[indices] <- dat$age_15[indices]
+
+dat$age_drink_25<- NA
+condition <- dat$drink_25 == 1
+indices <- which(condition)
+dat$age_drink_25[indices] <- dat$age_25[indices]
+
+dat$age_drink_35<- NA
+condition <- dat$drink_35 == 1
+indices <- which(condition)
+dat$age_drink_35[indices] <- dat$age_35[indices]
+
+#min age they reported drinking 
+vars<-c("age_drink_0","age_drink_05","age_drink_1","age_drink_15",
+        "age_drink_2","age_drink_25","age_drink_3","age_drink_35","age_drink_4")
+
+dat$age_drink <- do.call(pmin, c(dat[, vars], na.rm = TRUE))
+```
+
+#need to make age variable where if drink_ever==0 take last age
+```{r}
+dat <- dat %>%
+  group_by(src_subject_id) %>%
+  mutate(last_age = case_when(
+    event == 1 ~ age_0,
+    event == 2 ~ age_05,
+    event == 3 ~ age_1,
+    event == 4 ~ age_15,
+    event == 5 ~ age_2,
+    event == 6 ~ age_25,
+    event == 7 ~ age_3,
+    event == 8 ~ age_35,
+    event == 9 ~ age_4,
+    TRUE ~ NA_real_ ))
+#USE THIS IN THE REGRESSION 
+dat$age_drink_use<- ifelse(dat$drink_ever==1, dat$age_drink, dat$last_non_missing_age)
+
+```
+
+#sip age winzor
+```{r}
+pheno$age_sip_use_OLD<- pheno$age_sip_use
+
+dat$age_sip_use[dat$age_sip_use<4]<-3
+
+describe(pheno$age_sip_use)
+table(pheno$age_sip_use<4)
+```
+
+#code prenatal variables
+```{r}
+#comes from table 
+
+ph_p_dhx <- read.csv("~/Dropbox/ABCDR21/Raw Data/abcd-data-release-5.1/core/physical-health/ph_p_dhx.csv")
+
+ph_p_dhx_1<- subset(ph_p_dhx, ph_p_dhx$eventname=="baseline_year_1_arm_1")
+
+#8 is before knowing, #9 is after knowing
+vars<- c("devhx_8_tobacco","devhx_8_alcohol","devhx_8_marijuana","devhx_8_coc_crack","devhx_8_her_morph", "devhx_8_oxycont","devhx_8_other_drugs","devhx_9_tobacco","devhx_9_alcohol","devhx_9_marijuana","devhx_9_coc_crack","devhx_9_her_morph", "devhx_9_oxycont","devhx_9_other_drugs")
+
+ph_p_dhx_1[ph_p_dhx_1==999]<-NA
+
+ph_p_dhx_1$prenat_su_exp <- rowSums(ph_p_dhx_1[, vars], na.rm = TRUE)
+table(ph_p_dhx_1$prenat_su_exp)
+ph_p_dhx_1$prenat_su_exp[ph_p_dhx_1$prenat_su_exp>0]<-1
+table(ph_p_dhx_1$prenat_su_exp)
+prop.table(table(ph_p_dhx_1$prenat_su_exp))*100
+
+
+ph_p_dhx_1_merge<- ph_p_dhx_1[c(1,271)]
+
+dat <- merge(pheno, ph_p_dhx_1_merge, by = c("src_subject_id"), all.x = TRUE)
+
+write.csv(dat, "pheno_new.csv", row.names=F, quote= F)
+
+```
+
+
+
