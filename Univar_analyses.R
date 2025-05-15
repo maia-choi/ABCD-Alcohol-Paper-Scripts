@@ -7,7 +7,6 @@
 
 #start script#
 
-#read in packages, pray amarel cooperates
 library(survival)
 library(dplyr)
 library(coxme)
@@ -142,7 +141,7 @@ results_table$pheno <- phenos
 #write output table
 write.csv(results_table,"sip_PGS_11_05.csv")
 
-##########First Drinky Drink ##################
+##########First Drink ##################
 
 # Covars only model
 covar_drink<- coxme(Surv(age_drink_use, drink_ever) ~  factor(sex)+ factor(income) + pedu_c +factor(race_ethnicity)+(1|site_id_l/fid), data = dat)
@@ -258,7 +257,7 @@ results_table$pheno <- phenos
 #write output table
 write.csv(results_table,"drink_PGS_11_05.csv")
 
-########## Progression from Sippy Sip to Drinky Drink ###################
+########## Progression from Sip to Drink ###################
 
 #filter to ever had a sip
 dat_drink <- dat %>%
